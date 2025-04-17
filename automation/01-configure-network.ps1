@@ -38,12 +38,8 @@ if ($currentRoutes) {
     Get-NetIPConfiguration -InterfaceAlias $ifAlias | Remove-NetRoute -Confirm:$false
 }
 
-if (-not (Test-Connection -ComputerName $ip -Count 1 -Quiet)) {
-    Write-Host "Assigning static IP: $ip"
-    New-NetIPAddress -InterfaceAlias $ifAlias -IPAddress $ip -PrefixLength 24 -DefaultGateway $Gateway
-} else {
-    Write-Warning "IP $ip already responds to ping. Возможно, он уже используется."
-}
+Write-Host "Assigning static IP: $ip"
+New-NetIPAddress -InterfaceAlias $ifAlias -IPAddress $ip -PrefixLength 24 -DefaultGateway $Gateway
 
 Write-Host "Setting DNS server: $dns"
 Set-DnsClientServerAddress -InterfaceAlias $ifAlias -ServerAddresses $dns

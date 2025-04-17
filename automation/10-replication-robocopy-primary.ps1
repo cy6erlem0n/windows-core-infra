@@ -24,6 +24,15 @@ if (-not (Get-SmbShare -Name $ShareName -ErrorAction SilentlyContinue)) {
     Write-Host "[REPLICATION] SMB share '$ShareName' already exists."
 }
 
+$testFile = "$ReplicationPath\replica-test.txt"
+if (-not (Test-Path $testFile)) {
+    "This is a test file for verifying robocopy replication." | Out-File -Encoding UTF8 $testFile
+    Write-Host "[REPLICATION] Test file 'replica-test.txt' created."
+} else {
+    Write-Host "[REPLICATION] Test file already exists."
+}
+
+
 Write-Host "[REPLICATION] Generating robocopy script..."
 $robocopyScript = @"
 Robocopy "$ReplicationPath" "$RemotePath" /MIR /Z /R:3 /W:5 /NP /LOG:C:\replication_log.txt

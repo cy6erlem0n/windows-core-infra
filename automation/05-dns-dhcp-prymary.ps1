@@ -31,8 +31,10 @@ if ($currentOptions.DnsServer.ServerAddresses -ne $DnsServer) {
     Write-Host "DHCP options already set. Skipping."
 }
 
-Write-Host "Authorizing DHCP Server..."
-if (-not (Get-DhcpServerInDC -ComputerName $env:COMPUTERNAME -ErrorAction SilentlyContinue)) {
+$existingDhcp = Get-DhcpServerInDC -ErrorAction SilentlyContinue | `
+    Where-Object { $_.DnsName -eq "$PrimaryHostname.$DomainName" }
+
+if (-not $existingDhcp) {
     Add-DhcpServerInDC -DnsName "$PrimaryHostname.$DomainName" -IpAddress $PrimaryIP
     Write-Host "DHCP Server authorized."
 } else {

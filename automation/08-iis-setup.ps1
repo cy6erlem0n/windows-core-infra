@@ -1,6 +1,6 @@
 # 08-iis-setup.ps1
 
-. "$PSScriptRoot\..\config.ps1"
+. "$PSScriptRoot\00-config.ps1"
 
 $hostname = $env:COMPUTERNAME.ToUpper()
 if ($hostname -ne $PrimaryHostname.ToUpper()) {
@@ -22,7 +22,7 @@ if (!(Test-Path $IISSitePath)) {
     Write-Host "IIS site path already exists."
 }
 
-$localIndex = "$PSScriptRoot\..\common\index.html"
+$localIndex = "$PSScriptRoot\common\index.html"
 if (Test-Path $localIndex) {
     Copy-Item $localIndex -Destination "$IISSitePath\index.html" -Force
     Write-Host "Custom index.html deployed."

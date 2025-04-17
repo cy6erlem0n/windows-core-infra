@@ -1,6 +1,6 @@
-# 05-dns-dhcp-primary.ps1
+# 05-dns-dhcp-prymary.ps1
 
-. "$PSScriptRoot\..\config.ps1"
+. "$PSScriptRoot\00-config.ps1"
 
 $hostname = $env:COMPUTERNAME.ToUpper()
 if ($hostname -ne $PrimaryHostname.ToUpper()) {
@@ -8,24 +8,35 @@ if ($hostname -ne $PrimaryHostname.ToUpper()) {
     exit 1
 }
 
-# DNS зона
-Write-Host "Creating DNS zone $DomainName"
-Add-DnsServerPrimaryZone -Name $DomainName -ReplicationScope "Domain" -PassThru
-
-# DHCP Scope
 Write-Host "Creating DHCP Scope"
-Add-DhcpServerv4Scope -Name "MainScope" `
-    -StartRange $DhcpScopeStart -EndRange $DhcpScopeEnd `
-    -SubnetMask $DhcpMask `
-    -State Active
 
-# DHCP Options
-Set-DhcpServerv4OptionValue -ScopeId $DhcpSubnet `
-    -DnsDomain $DomainName `
-    -DnsServer $DnsServer `
-    -Router $Gateway
+if (-not (Get-DhcpServerv4Scope -ScopeId $DhcpSubnet -ErrorAction SilentlyContinue)) {
+    Add-DhcpServerv4Scope -Name "MainScope" `
+        -StartRange $DhcpScopeStart -EndRange $DhcpScopeEnd `
+        -SubnetMask $DhcpMask -State Active
+    Write-Host "DHCP Scope created."
+} else {
+    Write-Host "DHCP Scope already exists. Skipping creation."
+}
 
-Write-Host "Authorizing DHCP Server"
-Add-DhcpServerInDC -DnsName "$PrimaryHostname.$DomainName" -IpAddress $PrimaryIP
+
+$currentOptions = Get-DhcpServerv4OptionValue -ScopeId $DhcpSubnet
+if ($currentOptions.DnsServer.ServerAddresses -ne $DnsServer) {
+    Set-DhcpServerv4OptionValue -ScopeId $DhcpSubnet `
+        -DnsDomain $DomainName `
+        -DnsServer $DnsServer `
+        -Router $Gateway
+    Write-Host "DHCP options updated."
+} else {
+    Write-Host "DHCP options already set. Skipping."
+}
+
+Write-Host "Authorizing DHCP Server..."
+if (-not (Get-DhcpServerInDC -ComputerName $env:COMPUTERNAME -ErrorAction SilentlyContinue)) {
+    Add-DhcpServerInDC -DnsName "$PrimaryHostname.$DomainName" -IpAddress $PrimaryIP
+    Write-Host "DHCP Server authorized."
+} else {
+    Write-Host "DHCP Server already authorized. Skipping."
+}
 
 Write-Host "DNS and DHCP configured successfully on $PrimaryHostname"

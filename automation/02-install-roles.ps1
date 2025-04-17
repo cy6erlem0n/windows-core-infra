@@ -1,6 +1,6 @@
 # 02-install-roles.ps1
 
-. "$PSScriptRoot\..\config.ps1"
+. "$PSScriptRoot\00-config.ps1"
 
 $hostname = $env:COMPUTERNAME.ToUpper()
 
@@ -13,21 +13,25 @@ if ($hostname -eq $PrimaryHostname.ToUpper()) {
         "FS-Resource-Manager",
         "Web-Server"
     )
-    $includeMgmtTools = $true
 } elseif ($hostname -eq $SecondaryHostname.ToUpper()) {
     $roles = @(
         "AD-Domain-Services",
         "DHCP"
     )
-    $includeMgmtTools = $true
 } else {
     Write-Error "Unknown hostname: $hostname. Expected $PrimaryHostname or $SecondaryHostname."
     exit 1
 }
 
 foreach ($role in $roles) {
-    Write-Host "Installing role: $role"
-    Install-WindowsFeature -Name $role -IncludeManagementTools:$includeMgmtTools | Out-Null
+    $feature = Get-WindowsFeature -Name $role
+    if ($feature.Installed) {
+        Write-Host "[$role] already installed. Skipping."
+    } else {
+        Write-Host "Installing [$role]..."
+        Install-WindowsFeature -Name $role -IncludeManagementTools | Out-Null
+        Write-Host "[$role] installed successfully."
+    }
 }
 
-Write-Host "Role installation complete."
+Write-Host "Role installation complete on $hostname."

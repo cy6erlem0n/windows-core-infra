@@ -1,6 +1,6 @@
 # 07-dfs-setup.ps1
 
-. "$PSScriptRoot\..\config.ps1"
+. "$PSScriptRoot\00-config.ps1"
 
 $hostname = $env:COMPUTERNAME.ToUpper()
 if ($hostname -ne $PrimaryHostname.ToUpper()) {
@@ -36,8 +36,7 @@ if (-not (Get-DfsnFolder -Path "\\$DomainName\$NamespaceName\Docs" -ErrorAction 
     Write-Host "DFS folder 'Docs' already exists."
 }
 
-# Apply quota (external script)
-$quotaScript = "$PSScriptRoot\..\common\Set-FsrmQuota.ps1"
+$quotaScript = "$PSScriptRoot\common\Set-FsrmQuota.ps1"
 if (Test-Path $quotaScript) {
     PowerShell -ExecutionPolicy Bypass -File $quotaScript
     Write-Host "Quota script executed."

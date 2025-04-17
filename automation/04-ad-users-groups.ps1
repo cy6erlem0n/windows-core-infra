@@ -1,6 +1,6 @@
 # 04-ad-users-groups.ps1
 
-. "$PSScriptRoot\..\config.ps1"
+. "$PSScriptRoot\00-config.ps1"
 
 $hostname = $env:COMPUTERNAME.ToUpper()
 if ($hostname -ne $PrimaryHostname.ToUpper()) {
@@ -8,19 +8,64 @@ if ($hostname -ne $PrimaryHostname.ToUpper()) {
     exit 1
 }
 
-# Create AD users
-New-ADUser -Name "Ivan Petrov" -GivenName "Ivan" -Surname "Petrov" -SamAccountName "ipetrov" `
-    -UserPrincipalName "ipetrov@$DomainName" -AccountPassword (ConvertTo-SecureString "SmartPass123!" -AsPlainText -Force) -Enabled $true
+$users = @(
+    @{
+        Name = "Ivan Petrov"
+        GivenName = "Ivan"
+        Surname = "Petrov"
+        SamAccountName = "ipetrov"
+        UPN = "ipetrov@$DomainName"
+        Password = "SmartPass123!"
+    },
+    @{
+        Name = "Anna Ivanova"
+        GivenName = "Anna"
+        Surname = "Ivanova"
+        SamAccountName = "aivanova"
+        UPN = "aivanova@$DomainName"
+        Password = "AlsoSmartPass123!"
+    }
+)
 
-New-ADUser -Name "Anna Ivanova" -GivenName "Anna" -Surname "Ivanova" -SamAccountName "aivanova" `
-    -UserPrincipalName "aivanova@$DomainName" -AccountPassword (ConvertTo-SecureString "AlsoSmartPass123!" -AsPlainText -Force) -Enabled $true
+foreach ($user in $users) {
+    if (-not (Get-ADUser -Filter "SamAccountName -eq '$($user.SamAccountName)'" -ErrorAction SilentlyContinue)) {
+        New-ADUser -Name $user.Name `
+            -GivenName $user.GivenName -Surname $user.Surname `
+            -SamAccountName $user.SamAccountName `
+            -UserPrincipalName $user.UPN `
+            -AccountPassword (ConvertTo-SecureString $user.Password -AsPlainText -Force) `
+            -Enabled $true
+        Write-Host "User $($user.SamAccountName) created."
+    } else {
+        Write-Host "User $($user.SamAccountName) already exists. Skipping."
+    }
+}
 
-# Create AD groups
-New-ADGroup -Name "Support" -GroupScope Global -GroupCategory Security
-New-ADGroup -Name "DevOps" -GroupScope Global -GroupCategory Security
+$groups = @("Support", "DevOps")
 
-# Add users to groups
-Add-ADGroupMember -Identity "Support" -Members "ipetrov"
-Add-ADGroupMember -Identity "DevOps" -Members "aivanova"
+foreach ($group in $groups) {
+    if (-not (Get-ADGroup -Filter "Name -eq '$group'" -ErrorAction SilentlyContinue)) {
+        New-ADGroup -Name $group -GroupScope Global -GroupCategory Security
+        Write-Host "Group '$group' created."
+    } else {
+        Write-Host "Group '$group' already exists. Skipping."
+    }
+}
 
-Write-Host "Users and groups created successfully."
+$groupMembership = @{
+    "Support" = @("ipetrov")
+    "DevOps"  = @("aivanova")
+}
+
+foreach ($group in $groupMembership.Keys) {
+    foreach ($user in $groupMembership[$group]) {
+        if (-not (Get-ADGroupMember -Identity $group | Where-Object { $_.SamAccountName -eq $user })) {
+            Add-ADGroupMember -Identity $group -Members $user
+            Write-Host "User $user added to $group."
+        } else {
+            Write-Host "User $user is already a member of $group. Skipping."
+        }
+    }
+}
+
+Write-Host "Users and groups created and verified successfully."

@@ -1,6 +1,6 @@
 # 01-configure-network.ps1
 
-. "$PSScriptRoot\..\config.ps1"
+. "$PSScriptRoot\00-config.ps1"
 
 $hostname = $env:COMPUTERNAME.ToUpper()
 
@@ -18,21 +18,37 @@ if ($hostname -eq $PrimaryHostname.ToUpper()) {
 }
 
 $interface = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1
-
 if (-not $interface) {
     Write-Error "No active network interface found."
     exit 1
 }
 
 $ifAlias = $interface.Name
+Write-Host "Using network interface: $ifAlias"
 
-Write-Host "Configuring IP settings on $ifAlias..."
-Get-NetIPAddress -InterfaceAlias $ifAlias | Remove-NetIPAddress -Confirm:$false
-Get-NetIPConfiguration -InterfaceAlias $ifAlias | Remove-NetRoute -Confirm:$false
+$currentIP = Get-NetIPAddress -InterfaceAlias $ifAlias -ErrorAction SilentlyContinue
+if ($currentIP) {
+    Write-Host "Removing existing IP addresses..."
+    $currentIP | Remove-NetIPAddress -Confirm:$false
+}
 
-New-NetIPAddress -InterfaceAlias $ifAlias -IPAddress $ip -PrefixLength 24 -DefaultGateway $Gateway
+$currentRoutes = Get-NetIPConfiguration -InterfaceAlias $ifAlias | Select-Object -ExpandProperty IPv4DefaultGateway
+if ($currentRoutes) {
+    Write-Host "Removing existing default routes..."
+    Get-NetIPConfiguration -InterfaceAlias $ifAlias | Remove-NetRoute -Confirm:$false
+}
+
+if (-not (Test-Connection -ComputerName $ip -Count 1 -Quiet)) {
+    Write-Host "Assigning static IP: $ip"
+    New-NetIPAddress -InterfaceAlias $ifAlias -IPAddress $ip -PrefixLength 24 -DefaultGateway $Gateway
+} else {
+    Write-Warning "IP $ip already responds to ping. Возможно, он уже используется."
+}
+
+Write-Host "Setting DNS server: $dns"
 Set-DnsClientServerAddress -InterfaceAlias $ifAlias -ServerAddresses $dns
 
+Write-Host "Disabling firewall..."
 Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
 
 Enable-PSRemoting -Force

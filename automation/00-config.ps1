@@ -1,4 +1,4 @@
-# config.ps1
+# 00-config.ps1
 
 # ==== NETWORK SETTINGS ====
 $PrimaryHostname    = "SRV-CORE1"
@@ -7,7 +7,8 @@ $SecondaryHostname  = "SRV-CORE2"
 $SecondaryIP        = "10.0.0.2"
 $SubnetMask         = "255.255.255.0"
 $Gateway            = "10.0.0.254"
-$DnsServer          = $PrimaryIP
+$DnsServerPrimary   = "127.0.0.1"      
+$DnsServerSecondary = $PrimaryIP 
 
 # ==== DOMAIN SETTINGS ====
 $DomainName            = "main.local"

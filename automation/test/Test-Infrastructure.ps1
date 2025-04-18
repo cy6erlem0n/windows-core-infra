@@ -50,11 +50,17 @@ try {
     $errors++
 }
 
-# 6. DFS folder access
-if (Test-Path "\\main.local\share\Docs") {
-    Write-Host " DFS folder reachable."
-} else {
-    Write-Warning " DFS folder not reachable."
+# 6. DFS folder config check via DFS namespace
+try {
+    $dfs = Get-DfsnFolder -Path "\\main.local\share\Docs" -ErrorAction Stop
+    if ($dfs.State -eq "Online") {
+        Write-Host " DFS folder exists in namespace and is Online."
+    } else {
+        Write-Warning " DFS folder found but not Online (state: $($dfs.State))."
+        $errors++
+    }
+} catch {
+    Write-Warning " DFS folder not found in namespace."
     $errors++
 }
 
